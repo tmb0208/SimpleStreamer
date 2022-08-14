@@ -1,9 +1,8 @@
-#include <iostream>
-
-using namespace std;
+#include "Server.h"
 
 int main()
 {
-    cout << "Hello World!" << endl;
+    Server server;
+    server.Run();
     return 0;
 }

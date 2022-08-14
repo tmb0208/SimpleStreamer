@@ -1,9 +1,8 @@
-#include <iostream>
-
-using namespace std;
+#include "Publisher.h"
 
 int main()
 {
-    cout << "Hello World!" << endl;
+    char* secret_key = std::getenv("PUBLISHER_SECRET");
+    Publisher().Stream(secret_key);
     return 0;
 }

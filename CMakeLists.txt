@@ -13,7 +13,8 @@ find_package(Boost 1.76.0 REQUIRED system)
 
 set(subdirs
     simple_server
-    simple_publisher)
+    simple_publisher
+    common)
 
 foreach(subdir ${subdirs})
     add_subdirectory(${subdir})
