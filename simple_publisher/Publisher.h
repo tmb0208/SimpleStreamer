@@ -11,6 +11,7 @@ public:
     void Stream(const char* secret_key);
 
 private:
+    void GenerateStreamKey(char* stream_key, size_t size) const;
     void SendOffer(const char* secret_key);
     udp_port_type WaitUdpPort();
 

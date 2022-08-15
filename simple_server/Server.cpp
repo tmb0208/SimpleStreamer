@@ -21,12 +21,12 @@ void Server::Run() // TODO: Make const
     const Offer offer = ReadOffer();
     std::cout << "Offer received: "
               << (uint32_t)offer.offer_type << ", "
-              << offer.secret << ", "
+              << offer.secret_key << ", "
               << offer.stream_key << std::endl;
 
-    if (!ValidateSecretKey(offer.secret)) {
+    if (!ValidateSecretKey(offer.secret_key)) {
         std::stringstream err;
-        err << "Invalid secret key: " << offer.secret;
+        err << "Invalid secret key: " << offer.secret_key;
         throw std::runtime_error(err.str());
     }
     std::cout << "Secret key is valid" << std::endl;

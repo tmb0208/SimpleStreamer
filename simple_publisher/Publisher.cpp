@@ -25,6 +25,21 @@ void Publisher::Stream(const char* secret_key)
     std::cout << "Completed" << std::endl;
 }
 
+void Publisher::GenerateStreamKey(char* stream_key, size_t size) const
+{
+    if (size == 0) {
+        return;
+    }
+
+    while (size > 1) {
+        *stream_key = '0' + rand() % 10;
+        ++stream_key;
+        --size;
+    }
+
+    *stream_key = '\0';
+}
+
 udp_port_type Publisher::WaitUdpPort()
 {
     streambuf buf;
@@ -46,10 +61,10 @@ void Publisher::SendOffer(const char* secret_key)
     }
 
     const size_t secret_key_size = strlen(secret_key);
-    if (secret_key_size > sizeof(Offer::secret)) {
+    if (secret_key_size > sizeof(Offer::secret_key)) {
         std::stringstream err;
         err << "Secret key is longer than "
-            << std::to_string(sizeof(Offer::secret))
+            << std::to_string(sizeof(Offer::secret_key))
             << ": " << secret_key
             << '(' << std::to_string(secret_key_size) << ')';
         throw std::runtime_error(err.str());
@@ -59,8 +74,9 @@ void Publisher::SendOffer(const char* secret_key)
     m_socket.connect(ip::tcp::endpoint(
         ip::address::from_string(endpoint), PORT));
 
-    Offer offer { boost::endian::native_to_big(OfferType::Publisher), {}, "stream_key" };
-    memcpy(&offer.secret, secret_key, secret_key_size + 1 /*\0*/);
+    Offer offer { boost::endian::native_to_big(OfferType::Publisher), {}, {} };
+    memcpy(&offer.secret_key, secret_key, secret_key_size + 1 /*\0*/);
+    GenerateStreamKey(offer.stream_key, sizeof(offer.stream_key));
     const auto buf = buffer(&offer, sizeof(offer));
     boost::system::error_code error;
     write(m_socket, buf, transfer_exactly(sizeof(offer)), error);
