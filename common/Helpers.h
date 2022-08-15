@@ -2,11 +2,7 @@
 #include <cstdint>
 #include <limits>
 
-constexpr int PORT = 1234;
-constexpr size_t SECRET_KEY_SIZE = 16;
-constexpr size_t STREAM_KEY_SIZE = 16;
-
-using udp_port_type = uint32_t;
+constexpr int g_handshake_port = 1234;
 
 enum class OfferType : uint32_t { // TODO: Move to common
     Publisher,
@@ -14,7 +10,21 @@ enum class OfferType : uint32_t { // TODO: Move to common
 };
 
 struct Offer {
+    static constexpr size_t s_secret_key_size = 16;
+
     OfferType offer_type = OfferType::Undefined;
-    char secret_key[SECRET_KEY_SIZE] = {};
-    char stream_key[STREAM_KEY_SIZE] = {};
+    char secret_key[s_secret_key_size] = {};
+    uint32_t stream_key = 0;
+};
+
+struct Packet {
+    static constexpr size_t s_max_payload_size = 100;
+
+    struct Header {
+        uint32_t seq_num = std::numeric_limits<uint32_t>::max();
+        decltype(Offer::stream_key) stream_key = 0;
+    };
+
+    Header header;
+    uint8_t payload[s_max_payload_size] = {};
 };

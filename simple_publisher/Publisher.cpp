@@ -7,8 +7,17 @@
 
 using namespace boost::asio;
 
+namespace {
+decltype(Offer::stream_key) GenerateStreamKey()
+{
+    return static_cast<decltype(Offer::stream_key)>(rand());
+}
+}
+
 Publisher::Publisher()
-    : m_socket(m_io_service)
+    : m_handshake_socket(m_io_service)
+    , m_stream_socket(m_io_service)
+    , m_stream_key(GenerateStreamKey())
 {
 }
 
@@ -20,38 +29,10 @@ void Publisher::Stream(const char* secret_key)
     const auto udp_port = WaitUdpPort();
     std::cout << "Port received: " << udp_port << std::endl;
 
-    // TODO
+    SendPackets(udp_port);
+    std::cout << "Packets sent" << std::endl;
 
     std::cout << "Completed" << std::endl;
-}
-
-void Publisher::GenerateStreamKey(char* stream_key, size_t size) const
-{
-    if (size == 0) {
-        return;
-    }
-
-    while (size > 1) {
-        *stream_key = '0' + rand() % 10;
-        ++stream_key;
-        --size;
-    }
-
-    *stream_key = '\0';
-}
-
-udp_port_type Publisher::WaitUdpPort()
-{
-    streambuf buf;
-    boost::system::error_code error;
-    read(m_socket, buf, transfer_exactly(sizeof(udp_port_type)), error);
-    if (error) {
-        std::stringstream err;
-        err << "Failed to read UDP port: " << error.message();
-        throw std::runtime_error(err.str());
-    }
-
-    return *buffer_cast<const udp_port_type*>(buf.data());
 }
 
 void Publisher::SendOffer(const char* secret_key)
@@ -70,19 +51,48 @@ void Publisher::SendOffer(const char* secret_key)
         throw std::runtime_error(err.str());
     }
 
-    constexpr auto endpoint = "127.0.0.1";
-    m_socket.connect(ip::tcp::endpoint(
-        ip::address::from_string(endpoint), PORT));
+    m_handshake_socket.connect(ip::tcp::endpoint(
+        ip::address::from_string(s_endpoint), g_handshake_port));
 
-    Offer offer { boost::endian::native_to_big(OfferType::Publisher), {}, {} };
-    memcpy(&offer.secret_key, secret_key, secret_key_size + 1 /*\0*/);
-    GenerateStreamKey(offer.stream_key, sizeof(offer.stream_key));
+    Offer offer { boost::endian::native_to_big(OfferType::Publisher), {}, m_stream_key };
+    memcpy(offer.secret_key, secret_key, secret_key_size + 1 /*\0*/);
     const auto buf = buffer(&offer, sizeof(offer));
     boost::system::error_code error;
-    write(m_socket, buf, transfer_exactly(sizeof(offer)), error);
+    write(m_handshake_socket, buf, transfer_exactly(sizeof(offer)), error);
     if (error) {
         std::stringstream err;
         err << "Failed to send offer: " << error.message();
+        throw std::runtime_error(err.str());
+    }
+}
+
+ip::port_type Publisher::WaitUdpPort()
+{
+    ip::port_type result;
+    boost::system::error_code error;
+    read(m_handshake_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
+    if (error) {
+        std::stringstream err;
+        err << "Failed to read UDP port: " << error.message();
+        throw std::runtime_error(err.str());
+    }
+
+    return result;
+}
+
+void Publisher::SendPackets(const ip::port_type port)
+{
+    m_stream_socket.connect(ip::udp::endpoint(
+        ip::address::from_string(s_endpoint), port));
+
+    const decltype(Packet::payload) payload = { 't', 'e', 's', 't' };
+    Packet test_packet { { boost::endian::native_to_big(5), boost::endian::native_to_big(m_stream_key) }, {} };
+    memcpy(test_packet.payload, payload, sizeof(payload));
+    boost::system::error_code error;
+    m_stream_socket.send(buffer(&test_packet, sizeof(Packet::header) + sizeof(payload)), {}, error);
+    if (error) {
+        std::stringstream err;
+        err << "Failed to send packets: " << error.message();
         throw std::runtime_error(err.str());
     }
 }
