@@ -2,14 +2,14 @@
 
 #include <boost/asio.hpp>
 
-struct Offer;
+#include "Helpers.h"
 
 class HandshakeServer {
 
 public:
     HandshakeServer(std::shared_ptr<boost::asio::io_service> io_service);
 
-    void Run(const boost::asio::ip::port_type stream_port);
+    decltype(Offer::stream_key) Run(const boost::asio::ip::port_type stream_port);
 
 private:
     Offer ReadOffer();

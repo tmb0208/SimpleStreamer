@@ -27,6 +27,8 @@ struct Packet {
         decltype(Offer::stream_key) stream_key = 0;
     };
 
+    using PayloadItem = char;
+
     Header header;
-    uint8_t payload[s_max_payload_size] = {};
+    PayloadItem payload[s_max_payload_size] = {};
 };

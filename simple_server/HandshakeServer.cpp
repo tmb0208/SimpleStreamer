@@ -16,7 +16,7 @@ HandshakeServer::HandshakeServer(std::shared_ptr<io_service> io_service)
     m_acceptor.accept(m_socket);
 }
 
-void HandshakeServer::Run(const ip::port_type stream_port)
+decltype(Offer::stream_key) HandshakeServer::Run(const ip::port_type stream_port)
 {
     std::cout << "Handshake started" << std::endl;
 
@@ -37,6 +37,7 @@ void HandshakeServer::Run(const ip::port_type stream_port)
     std::cout << "Stream port sent" << std::endl;
 
     std::cout << "Handshake completed" << std::endl;
+    return offer.stream_key;
 }
 
 Offer HandshakeServer::ReadOffer()
