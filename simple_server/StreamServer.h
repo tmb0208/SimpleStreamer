@@ -17,5 +17,5 @@ private:
 
 private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
-    boost::asio::ip::udp::socket m_stream_socket;
+    boost::asio::ip::udp::socket m_socket;
 };

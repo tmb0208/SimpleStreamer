@@ -21,5 +21,5 @@ private:
 
     std::shared_ptr<boost::asio::io_service> m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
-    boost::asio::ip::tcp::socket m_handshake_socket;
+    boost::asio::ip::tcp::socket m_socket;
 };

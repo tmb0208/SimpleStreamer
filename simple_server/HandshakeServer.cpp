@@ -11,13 +11,14 @@ using namespace boost::asio;
 HandshakeServer::HandshakeServer(std::shared_ptr<io_service> io_service)
     : m_io_service(io_service)
     , m_acceptor(*m_io_service, ip::tcp::endpoint(ip::tcp::v4(), g_handshake_port))
-    , m_handshake_socket(*m_io_service)
+    , m_socket(*m_io_service)
 {
+    m_acceptor.accept(m_socket);
 }
 
-void HandshakeServer::Run(const ip::port_type stream_port) // TODO: Make const
+void HandshakeServer::Run(const ip::port_type stream_port)
 {
-    m_acceptor.accept(m_handshake_socket);
+    std::cout << "Handshake started" << std::endl;
 
     const Offer offer = ReadOffer();
     std::cout << "Offer received: "
@@ -42,7 +43,7 @@ Offer HandshakeServer::ReadOffer()
 {
     Offer result;
     boost::system::error_code error;
-    read(m_handshake_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
+    read(m_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
     if (error) {
         std::stringstream err;
         err << "Failed to read offer: " << error.message();
@@ -62,7 +63,7 @@ void HandshakeServer::SendStreamPort(const ip::port_type port)
 {
     const auto buf = buffer(&port, sizeof(port));
     boost::system::error_code error;
-    write(m_handshake_socket, buf, transfer_exactly(sizeof(port)), error);
+    write(m_socket, buf, transfer_exactly(sizeof(port)), error);
     if (error) {
         std::stringstream err;
         err << "Failed to send udp port: " << error.message();

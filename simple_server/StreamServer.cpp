@@ -11,12 +11,14 @@ using namespace boost::asio;
 
 StreamServer::StreamServer(std::shared_ptr<boost::asio::io_service> io_service)
     : m_io_service(io_service)
-    , m_stream_socket(*m_io_service, ip::udp::endpoint(ip::udp::v4(), 0))
+    , m_socket(*m_io_service, ip::udp::endpoint(ip::udp::v4(), 0))
 {
 }
 
 void StreamServer::Run()
 {
+    std::cout << "Stream started" << std::endl;
+
     ReadPackets();
     std::cout << "Packets read" << std::endl;
 
@@ -25,14 +27,14 @@ void StreamServer::Run()
 
 ip::port_type StreamServer::Port() const noexcept
 {
-    return m_stream_socket.local_endpoint().port();
+    return m_socket.local_endpoint().port();
 }
 
 void StreamServer::ReadPackets()
 {
     Packet packet;
     boost::system::error_code error;
-    const auto packet_size = m_stream_socket.receive(buffer(&packet, sizeof(packet)), {}, error);
+    const auto packet_size = m_socket.receive(buffer(&packet, sizeof(packet)), {}, error);
     if (error) {
         std::stringstream err;
         err << "Failed to read stream packet: " << error.message();
