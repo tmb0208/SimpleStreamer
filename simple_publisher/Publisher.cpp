@@ -47,7 +47,10 @@ void Publisher::SendPackets(const std::string& file_path)
         SendPacket(packet, bytes_read);
         Log();
         ++m_last_packet_seq_num;
+        std::this_thread::sleep_for(std::chrono::seconds(60 / g_packets_per_minute));
     }
+
+    Log(true);
 }
 
 void Publisher::SendPacket(const Packet& packet, size_t payload_size)
@@ -63,9 +66,9 @@ void Publisher::SendPacket(const Packet& packet, size_t payload_size)
     m_payload_sum += payload_size;
 }
 
-void Publisher::Log() const noexcept
+void Publisher::Log(bool force /*= false*/) const noexcept
 {
-    if (m_last_packet_seq_num % s_packets_log_frequency != 0) {
+    if (m_last_packet_seq_num % g_packets_per_minute != 0 && !force) {
         return;
     }
 

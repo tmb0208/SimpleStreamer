@@ -17,7 +17,7 @@ public:
 private:
     void WriteReceivedPacketsTo(const std::string& file_path, StreamKeyType stream_key);
     size_t ReceivePacket(Packet& result);
-    void Log(StreamKeyType stream_key) const noexcept;
+    void Log(StreamKeyType stream_key, bool force = false) const noexcept;
 
 private:
     std::shared_ptr<boost::asio::io_service> m_io_service;

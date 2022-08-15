@@ -14,8 +14,8 @@ public:
 
 private:
     void SendPackets(const std::string& file_path);
-    void SendPacket(const Packet &packet, size_t payload_size);
-    void Log() const noexcept;
+    void SendPacket(const Packet& packet, size_t payload_size);
+    void Log(bool force = false) const noexcept;
 
 private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
@@ -25,6 +25,4 @@ private:
 
     uint64_t m_payload_sum = 0;
     SeqNumType m_last_packet_seq_num = 0;
-
-    inline static constexpr size_t s_packets_log_frequency = 5;
 };

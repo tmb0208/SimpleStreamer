@@ -69,13 +69,15 @@ void StreamServer::WriteReceivedPacketsTo(
         m_payload_sum += payload_size;
         Log(packet.header.stream_key);
     }
+
+    Log(packet.header.stream_key, true);
 }
 
 size_t StreamServer::ReceivePacket(Packet& result)
 {
     std::future<std::size_t> read_result = m_socket.async_receive(
         buffer(&result, sizeof(result)), boost::asio::use_future);
-    constexpr auto timeout = std::chrono::seconds(3);
+    constexpr auto timeout = g_gap_between_packets + std::chrono::seconds(3);
     if (read_result.wait_for(timeout) == std::future_status::timeout) {
         m_socket.close();
         std::cout << "Socket closed" << std::endl;
@@ -100,10 +102,11 @@ size_t StreamServer::ReceivePacket(Packet& result)
     return payload_size;
 }
 
-void StreamServer::Log(StreamKeyType stream_key) const noexcept
+void StreamServer::Log(StreamKeyType stream_key, bool force /*= false*/) const noexcept
 {
     if (m_last_logged_packet_seq_num != Packet::Header::s_invalid_seq_num
-        && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute) {
+        && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute
+        && !force) {
         return;
     }
 
