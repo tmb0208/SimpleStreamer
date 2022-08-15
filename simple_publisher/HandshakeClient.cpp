@@ -14,7 +14,7 @@ HandshakeClient::HandshakeClient(std::shared_ptr<boost::asio::io_service> io_ser
 }
 
 ip::port_type HandshakeClient::Run(
-    const char* endpoint, const char* secret_key, decltype(Offer::stream_key) stream_key)
+    const char* endpoint, const char* secret_key, StreamKeyType stream_key)
 {
     std::cout << "Handshake started" << std::endl;
 
@@ -29,7 +29,7 @@ ip::port_type HandshakeClient::Run(
 }
 
 void HandshakeClient::SendOffer(
-    const char* endpoint, const char* secret_key, decltype(Offer::stream_key) stream_key)
+    const char* endpoint, const char* secret_key, StreamKeyType stream_key)
 {
     if (secret_key == nullptr) {
         throw std::runtime_error("PUBLISHER_SECRET environment variable not initialized");

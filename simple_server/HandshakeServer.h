@@ -9,7 +9,7 @@ class HandshakeServer {
 public:
     HandshakeServer(std::shared_ptr<boost::asio::io_service> io_service);
 
-    decltype(Offer::stream_key) Run(const boost::asio::ip::port_type stream_port);
+    StreamKeyType Run(const boost::asio::ip::port_type stream_port);
 
 private:
     Offer ReadOffer();

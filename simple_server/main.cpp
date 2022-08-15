@@ -9,19 +9,17 @@ int main(int argc, char** argv)
         std::cerr << "Usage: simple_server [file]  Receives udp stream and save to file" << std::endl;
         return 1;
     }
-    const auto file_path = argv[1];
 
     auto io_service = std::make_shared<boost::asio::io_service>();
     boost::asio::io_service::work work(*io_service);
-    std::thread thread([io_service]() {
-                std::cout << "IO started" << std::endl;
-                io_service->run();
-                std::cout << "IO ended" << std::endl; });
+    std::thread thread([io_service]() { io_service->run(); });
 
     StreamServer stream_server(io_service);
     HandshakeServer handshake_server(io_service);
     const auto stream_key = handshake_server.Run(stream_server.Port());
+    const auto file_path = argv[1];
     stream_server.Run(file_path, stream_key);
+
     io_service->stop();
     thread.join();
     return 0;

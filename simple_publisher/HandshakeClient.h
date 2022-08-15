@@ -9,11 +9,11 @@ public:
     HandshakeClient(std::shared_ptr<boost::asio::io_service> io_service);
 
     boost::asio::ip::port_type Run(
-        const char* endpoint, const char* secret_key, decltype(Offer::stream_key) stream_key);
+        const char* endpoint, const char* secret_key, StreamKeyType stream_key);
 
 private:
     void SendOffer(
-        const char* endpoint, const char* secret_key, decltype(Offer::stream_key) stream_key);
+        const char* endpoint, const char* secret_key, StreamKeyType stream_key);
     boost::asio::ip::port_type WaitStreamPort();
 
 private:

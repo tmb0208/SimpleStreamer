@@ -10,15 +10,21 @@ public:
 
     void Stream(const char* endpoint, boost::asio::ip::port_type port, const std::string& file_path);
 
-    decltype(Offer::stream_key) StreamKey() const;
+    StreamKeyType StreamKey() const;
 
 private:
     void SendPackets(const std::string& file_path);
-    void SendPacket(Packet packet, size_t payload_size);
+    void SendPacket(const Packet &packet, size_t payload_size);
+    void Log() const noexcept;
 
 private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
-    boost::asio::ip::udp::socket m_stream_socket;
+    boost::asio::ip::udp::socket m_socket;
 
-    decltype(Offer::stream_key) m_stream_key;
+    StreamKeyType m_stream_key;
+
+    uint64_t m_payload_sum = 0;
+    SeqNumType m_last_packet_seq_num = 0;
+
+    inline static constexpr size_t s_packets_log_frequency = 5;
 };
