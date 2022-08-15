@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -14,7 +16,7 @@ struct Offer {
 
     OfferType offer_type = OfferType::Undefined;
     char secret_key[s_secret_key_size] = {};
-    uint32_t stream_key = 0;
+    uint32_t stream_key = 0; // TODO: decl stream_key type
 };
 
 struct Packet {

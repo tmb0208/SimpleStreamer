@@ -6,20 +6,17 @@
 
 class Publisher {
 public:
-    Publisher();
+    Publisher(std::shared_ptr<boost::asio::io_service> io_service);
 
-    void Stream(const char* secret_key);
+    void Stream(const char* endpoint, boost::asio::ip::port_type port);
 
-private:
-    void SendOffer(const char* secret_key);
-    boost::asio::ip::port_type WaitUdpPort();
-    void SendPackets(const boost::asio::ip::port_type port);
+    decltype(Offer::stream_key) StreamKey() const;
 
 private:
-    static constexpr auto s_endpoint = "127.0.0.1";
+    void SendPackets(const char* endpoint, const boost::asio::ip::port_type port);
 
-    boost::asio::io_service m_io_service;
-    boost::asio::ip::tcp::socket m_handshake_socket;
+private:
+    std::shared_ptr<boost::asio::io_service> m_io_service;
     boost::asio::ip::udp::socket m_stream_socket;
 
     decltype(Offer::stream_key) m_stream_key;
