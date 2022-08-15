@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(src
-    Helpers.h)
-
 set(inc
     Helpers.cpp)
+
+set(src
+    Helpers.h)
 
 add_library(common STATIC
     ${src}

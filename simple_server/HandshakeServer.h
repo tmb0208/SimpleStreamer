@@ -4,25 +4,22 @@
 
 struct Offer;
 
-class Server {
+class HandshakeServer {
 
 public:
-    Server();
+    HandshakeServer(std::shared_ptr<boost::asio::io_service> io_service);
 
-    void Run();
+    void Run(const boost::asio::ip::port_type stream_port);
 
 private:
     Offer ReadOffer();
     bool ValidateSecretKey(const char* secret_key) const noexcept;
-    void SendUdpPort();
-    void ReadPackets();
+    void SendStreamPort(const boost::asio::ip::port_type port);
 
 private:
     static constexpr char s_expected_secret_key[] = "secret_key";
 
-    boost::asio::io_service m_io_service;
+    std::shared_ptr<boost::asio::io_service> m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
     boost::asio::ip::tcp::socket m_handshake_socket;
-
-    boost::asio::ip::udp::socket m_stream_socket;
 };
