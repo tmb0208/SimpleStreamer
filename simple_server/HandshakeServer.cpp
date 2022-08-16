@@ -4,7 +4,7 @@
 
 #include <boost/endian/conversion.hpp>
 
-#include "Helpers.h"
+#include "Defs.h"
 #include "Offer.h"
 
 using namespace boost::asio;

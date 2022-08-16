@@ -8,6 +8,8 @@
 
 using namespace boost::asio;
 
+struct TimeoutException { };
+
 StreamServer::StreamServer(io_service& io_service)
     : m_io_service(io_service)
     , m_socket(m_io_service, ip::udp::endpoint(ip::udp::v4(), 0))
@@ -29,79 +31,69 @@ ip::port_type StreamServer::Port() const noexcept
 
 void StreamServer::WriteReceivedPacketsTo(std::ostream& stream)
 {
-    Packet packet;
     while (true) {
-        const size_t payload_size = ReceivePacket(packet);
-        if (payload_size == 0) {
-            break;
-        }
+        try {
+            const Packet packet = ReceivePacket();
 
-        if (m_stream_key != packet.header.stream_key) {
-            ++m_discarded_packets;
-            std::cerr << "Packet " << packet.header.seq_num
-                      << " discarded. Unexpected stream_key "
-                      << packet.header.stream_key
-                      << ", expected " << m_stream_key << std::endl;
-            continue;
-        }
-
-        if (Packet::Header::s_invalid_seq_num == packet.header.seq_num) {
-            ++m_discarded_packets;
-            std::cerr << "Invalid sequence number. Packet discarded." << std::endl;
-            continue;
-        }
-
-        if (m_last_packet_seq_num != Packet::Header::s_invalid_seq_num) {
-            if (m_last_packet_seq_num >= packet.header.seq_num) {
-                std::stringstream err;
-                err << "Unexpected sequence number: " << packet.header.seq_num
-                    << ", last_packet_seq_num=" << m_last_packet_seq_num;
-                throw std::runtime_error(err.str());
+            if (m_stream_key != packet.StreamKey()) {
+                ++m_discarded_packets;
+                std::cerr << "Packet " << packet.SeqNum()
+                          << " discarded. Unexpected stream_key "
+                          << packet.StreamKey()
+                          << ", expected " << m_stream_key << std::endl;
+                continue;
             }
 
-            m_lost_packets += packet.header.seq_num - m_last_packet_seq_num - 1;
+            if (Packet::s_invalid_seq_num == packet.SeqNum()) {
+                ++m_discarded_packets;
+                std::cerr << "Invalid sequence number. Packet discarded." << std::endl;
+                continue;
+            }
+
+            if (m_last_packet_seq_num != Packet::s_invalid_seq_num) {
+                if (m_last_packet_seq_num >= packet.SeqNum()) {
+                    std::stringstream err;
+                    err << "Unexpected sequence number: " << packet.SeqNum()
+                        << ", last_packet_seq_num=" << m_last_packet_seq_num;
+                    throw std::runtime_error(err.str());
+                }
+
+                m_lost_packets += packet.SeqNum() - m_last_packet_seq_num - 1;
+            }
+
+            m_last_packet_seq_num = packet.SeqNum();
+
+            const auto& payload = packet.Payload();
+            stream.write(payload.data(), payload.size());
+            m_payload_sum += payload.size();
+            Log(packet.StreamKey());
+        } catch (TimeoutException) {
+            break;
         }
-
-        m_last_packet_seq_num = packet.header.seq_num;
-
-        stream.write(packet.payload, payload_size);
-        m_payload_sum += payload_size;
-        Log(packet.header.stream_key);
     }
 
     Log(true);
 }
 
-size_t StreamServer::ReceivePacket(Packet& result)
+Packet StreamServer::ReceivePacket()
 {
+    std::vector<std::byte> buf;
+    buf.resize(Packet::s_max_packet_size); // TODO: resize?
     std::future<std::size_t> read_result = m_socket.async_receive(
-        buffer(&result, sizeof(result)), boost::asio::use_future);
+        buffer(buf), boost::asio::use_future);
     constexpr auto timeout = g_gap_between_packets + std::chrono::seconds(3);
     if (read_result.wait_for(timeout) == std::future_status::timeout) {
-        return 0;
+        throw TimeoutException();
     }
 
-    const auto packet_size = read_result.get();
-    if (packet_size <= sizeof(Packet::header)) {
-        std::stringstream err;
-        err << "Invalid packet: size=" << packet_size;
-        throw std::runtime_error(err.str());
-    }
-
-    result.header.seq_num = boost::endian::big_to_native(result.header.seq_num);
-    result.header.stream_key = boost::endian::big_to_native(result.header.stream_key);
-
-    const size_t payload_size = packet_size - sizeof(Packet::header);
-    //    std::cout << "Packet received: seq_num=" << result.header.seq_num
-    //              << ", stream_key=" << result.header.stream_key
-    //              << ", payload_size=" << payload_size << std::endl;
-
-    return payload_size;
+    const size_t bytes_read = read_result.get();
+    buf.resize(bytes_read);
+    return Packet::Deserialize(buf);
 }
 
 void StreamServer::Log(bool force /*= false*/) noexcept
 {
-    if (m_last_logged_packet_seq_num != Packet::Header::s_invalid_seq_num
+    if (m_last_logged_packet_seq_num != Packet::s_invalid_seq_num
         && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute
         && !force) {
         return;

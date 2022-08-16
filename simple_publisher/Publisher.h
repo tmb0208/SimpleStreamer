@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Helpers.h"
+#include "Defs.h"
 
 #include <boost/asio.hpp>
+
+class Packet;
 
 class Publisher {
 public:
@@ -15,7 +17,7 @@ public:
 
 private:
     void SendPackets(std::istream& stream);
-    void SendPacket(const Packet& packet, size_t payload_size);
+    void SendPacket(const Packet& packet);
     void Log(bool force = false) const noexcept;
 
 private:

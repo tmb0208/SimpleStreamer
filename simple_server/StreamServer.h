@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Helpers.h"
+#include "Defs.h"
+#include "Packet.h"
 
 #include <memory>
 
@@ -16,7 +17,7 @@ public:
 
 private:
     void WriteReceivedPacketsTo(std::ostream& stream);
-    size_t ReceivePacket(Packet& result);
+    Packet ReceivePacket();
     void Log(bool force = false) noexcept;
 
 private:
@@ -28,6 +29,6 @@ private:
     size_t m_discarded_packets = 0;
     size_t m_lost_packets = 0;
     uint64_t m_payload_sum = 0;
-    SeqNumType m_last_packet_seq_num = Packet::Header::s_invalid_seq_num;
-    SeqNumType m_last_logged_packet_seq_num = Packet::Header::s_invalid_seq_num;
+    SeqNumType m_last_packet_seq_num = Packet::s_invalid_seq_num;
+    SeqNumType m_last_logged_packet_seq_num = Packet::s_invalid_seq_num;
 };

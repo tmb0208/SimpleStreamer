@@ -1,5 +1,5 @@
 #include "HandshakeClient.h"
-#include "Helpers.h"
+#include "Defs.h"
 #include "Publisher.h"
 
 #include <fstream>

@@ -1,4 +1,5 @@
 #include "Publisher.h"
+#include "Packet.h"
 
 #include <iostream>
 
@@ -26,13 +27,14 @@ void Publisher::Stream(std::istream& stream)
 
 void Publisher::SendPackets(std::istream& stream)
 {
-    Packet packet;
-    packet.header.stream_key = boost::endian::native_to_big(m_stream_key);
     while (stream.good()) {
-        stream.read(packet.payload, Packet::s_max_payload_size);
+        std::vector<PayloadItem> payload(Packet::s_max_payload_size);
+        stream.read(payload.data(), Packet::s_max_payload_size);
         const auto bytes_read = stream.gcount();
-        packet.header.seq_num = boost::endian::native_to_big(m_last_packet_seq_num);
-        SendPacket(packet, bytes_read);
+        payload.resize(bytes_read);
+
+        Packet packet(m_last_packet_seq_num, m_stream_key, std::move(payload));
+        SendPacket(packet);
         Log();
         ++m_last_packet_seq_num;
         //        std::this_thread::sleep_for(g_gap_between_packets);
@@ -41,15 +43,15 @@ void Publisher::SendPackets(std::istream& stream)
     Log(true);
 }
 
-void Publisher::SendPacket(const Packet& packet, size_t payload_size)
+void Publisher::SendPacket(const Packet& packet)
 {
     boost::system::error_code error;
-    m_socket.send(buffer(&packet, sizeof(Packet::header) + payload_size), {}, error);
+    m_socket.send(buffer(packet.Serialize()), {}, error);
     if (error) {
         detail::throw_error(error, "Failed to send packets");
     }
 
-    m_payload_sum += payload_size;
+    m_payload_sum += packet.Payload().size();
 }
 
 void Publisher::Log(bool force /*= false*/) const noexcept
