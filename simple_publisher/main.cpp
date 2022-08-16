@@ -1,8 +1,11 @@
 #include "HandshakeClient.h"
+#include "Helpers.h"
 #include "Publisher.h"
 
 #include <fstream>
 #include <iostream>
+
+#include <boost/asio.hpp>
 
 int main(int argc, char** argv)
 {
@@ -13,15 +16,19 @@ int main(int argc, char** argv)
     std::ifstream file(argv[1], std::ios::binary);
 
     boost::asio::io_service io_service;
-    Publisher publisher(io_service);
-    HandshakeClient handshake_client(io_service);
-    constexpr std::string_view endpoint = "127.0.0.1";
-    char* secret_key = std::getenv("PUBLISHER_SECRET");
+
+    const auto address = boost::asio::ip::make_address("127.0.0.1");
+    const char* secret_key = std::getenv("PUBLISHER_SECRET");
     if (secret_key == nullptr) {
         throw std::runtime_error("PUBLISHER_SECRET environment variable not initialized");
     }
 
-    const auto stream_port = handshake_client.Run("127.0.0.1", secret_key, publisher.StreamKey());
-    publisher.Stream(endpoint, stream_port, file);
+    HandshakeClient handshake_client(io_service, address);
+    StreamKeyType stream_key;
+    boost::asio::ip::port_type port = 0;
+    handshake_client.Run(secret_key, port, stream_key);
+
+    Publisher publisher(io_service, address, port, stream_key);
+    publisher.Stream(file);
     return 0;
 }

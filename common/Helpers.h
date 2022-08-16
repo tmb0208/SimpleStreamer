@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <limits>
 
@@ -11,19 +10,6 @@ constexpr std::chrono::seconds g_gap_between_packets(60 / g_packets_per_minute);
 
 using StreamKeyType = uint32_t;
 using SeqNumType = uint32_t;
-
-struct Offer { // TODO: Rewrite as class
-    static constexpr size_t s_secret_key_size = 16;
-
-    enum class Type : uint32_t {
-        Undefined,
-        Publisher
-    };
-
-    Type offer_type = Type::Undefined;
-    char secret_key[s_secret_key_size] = {};
-    StreamKeyType stream_key = 0;
-};
 
 struct Packet { // TODO: Rewrite as class
     static constexpr size_t s_max_payload_size = 100;

@@ -5,6 +5,7 @@
 #include <boost/endian/conversion.hpp>
 
 #include "Helpers.h"
+#include "Offer.h"
 
 using namespace boost::asio;
 
@@ -22,14 +23,12 @@ StreamKeyType HandshakeServer::Run(ip::port_type stream_port)
 
     auto offer = ReadOffer();
     std::cout << "Offer received: "
-              << (uint32_t)offer.offer_type << ", "
-              << offer.secret_key << ", "
-              << offer.stream_key << std::endl;
+              << static_cast<uint32_t>(offer.Type()) << ", "
+              << offer.SecretKey() << ", "
+              << offer.StreamKey() << std::endl;
 
-    if (!ValidateSecretKey(offer)) {
-        std::stringstream err;
-        err << "Invalid secret key: " << offer.secret_key;
-        throw std::runtime_error(err.str());
+    if (!offer.Validate(s_expected_secret_key, Offer::EType::Publisher)) {
+        throw std::runtime_error("Invalid secret key");
     }
     std::cout << "Secret key is valid" << std::endl;
 
@@ -37,26 +36,19 @@ StreamKeyType HandshakeServer::Run(ip::port_type stream_port)
     std::cout << "Stream port sent" << std::endl;
 
     std::cout << "Handshake completed" << std::endl;
-    return offer.stream_key;
+    return offer.StreamKey();
 }
 
 Offer HandshakeServer::ReadOffer()
 {
-    Offer result;
+    std::vector<std::byte> data(Offer::s_serialized_size);
     boost::system::error_code error;
-    read(m_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
+    read(m_socket, buffer(data), transfer_exactly(Offer::s_serialized_size), error);
     if (error) {
         detail::throw_error(error, "Failed to read offer");
     }
 
-    result.offer_type = boost::endian::big_to_native(result.offer_type);
-    result.stream_key = boost::endian::big_to_native(result.stream_key);
-    return result;
-}
-
-bool HandshakeServer::ValidateSecretKey(const Offer& offer) const noexcept // TODO: Move to Offer class
-{
-    return s_expected_secret_key == offer.secret_key && offer.offer_type == Offer::Type::Publisher;
+    return Offer::Deserialize(data);
 }
 
 void HandshakeServer::SendStreamPort(ip::port_type port)

@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     HandshakeServer handshake_server(io_service);
     const auto stream_key = handshake_server.Run(stream_server.Port());
     std::ofstream file(argv[1], std::ios::binary);
-    stream_server.Run(file, stream_key);
+    stream_server.Run(stream_key, file);
     io_service.stop();
     thread.join();
     return 0;

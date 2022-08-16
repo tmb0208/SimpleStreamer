@@ -6,32 +6,22 @@
 
 using namespace boost::asio;
 
-namespace {
-StreamKeyType GenerateStreamKey()
-{
-    return static_cast<StreamKeyType>(rand());
-}
-}
-
-Publisher::Publisher(boost::asio::io_service& io_service)
+Publisher::Publisher(boost::asio::io_service& io_service,
+    const ip::address& address,
+    boost::asio::ip::port_type port,
+    StreamKeyType stream_key)
     : m_io_service(io_service)
     , m_socket(m_io_service)
-    , m_stream_key(GenerateStreamKey())
+    , m_stream_key(stream_key)
 {
+    m_socket.connect(ip::udp::endpoint(address, port));
 }
 
-void Publisher::Stream(std::string_view endpoint, ip::port_type port, std::istream& stream)
+void Publisher::Stream(std::istream& stream)
 {
-    m_socket.connect(ip::udp::endpoint(
-        ip::make_address(endpoint), port));
     std::cout << "Stream started" << std::endl;
     SendPackets(stream);
     std::cout << "Stream completed" << std::endl;
-}
-
-StreamKeyType Publisher::StreamKey() const noexcept
-{
-    return m_stream_key;
 }
 
 void Publisher::SendPackets(std::istream& stream)

@@ -4,6 +4,8 @@
 
 #include <boost/asio.hpp>
 
+class Offer;
+
 class HandshakeServer {
 
 public:
@@ -13,7 +15,6 @@ public:
 
 private:
     Offer ReadOffer();
-    bool ValidateSecretKey(const Offer &offer) const noexcept;
     void SendStreamPort(boost::asio::ip::port_type port);
 
 private:

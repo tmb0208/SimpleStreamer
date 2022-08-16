@@ -6,11 +6,12 @@
 
 class Publisher {
 public:
-    explicit Publisher(boost::asio::io_service& io_service);
+    explicit Publisher(boost::asio::io_service& io_service,
+        const boost::asio::ip::address& address,
+        boost::asio::ip::port_type port,
+        StreamKeyType stream_key);
 
-    void Stream(std::string_view endpoint, boost::asio::ip::port_type port, std::istream& stream);
-
-    StreamKeyType StreamKey() const noexcept;
+    void Stream(std::istream& stream);
 
 private:
     void SendPackets(std::istream& stream);

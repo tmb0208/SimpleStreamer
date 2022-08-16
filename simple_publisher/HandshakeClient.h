@@ -4,16 +4,19 @@
 
 #include <boost/asio.hpp>
 
+class Offer;
+
 class HandshakeClient {
 public:
-    explicit HandshakeClient(boost::asio::io_service& io_service);
+    explicit HandshakeClient(boost::asio::io_service& io_service,
+        const boost::asio::ip::address& address);
 
-    boost::asio::ip::port_type Run(
-        std::string_view endpoint, std::string_view secret_key, StreamKeyType stream_key);
+    void Run(std::string_view secret_key,
+        boost::asio::ip::port_type& udp_port,
+        StreamKeyType& stream_key);
 
 private:
-    void SendOffer(
-        std::string_view endpoint, std::string_view secret_key, StreamKeyType stream_key);
+    void SendOffer(const Offer& offer);
     boost::asio::ip::port_type WaitStreamPort();
 
 private:

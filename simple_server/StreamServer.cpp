@@ -14,10 +14,11 @@ StreamServer::StreamServer(io_service& io_service)
 {
 }
 
-void StreamServer::Run(std::ostream& stream, StreamKeyType stream_key)
+void StreamServer::Run(StreamKeyType stream_key, std::ostream& stream)
 {
+    m_stream_key = stream_key;
     std::cout << "Stream started" << std::endl;
-    WriteReceivedPacketsTo(stream, stream_key);
+    WriteReceivedPacketsTo(stream);
     std::cout << "Stream completed" << std::endl;
 }
 
@@ -26,7 +27,7 @@ ip::port_type StreamServer::Port() const noexcept
     return m_socket.local_endpoint().port();
 }
 
-void StreamServer::WriteReceivedPacketsTo(std::ostream& stream, StreamKeyType stream_key)
+void StreamServer::WriteReceivedPacketsTo(std::ostream& stream)
 {
     Packet packet;
     while (true) {
@@ -35,12 +36,12 @@ void StreamServer::WriteReceivedPacketsTo(std::ostream& stream, StreamKeyType st
             break;
         }
 
-        if (stream_key != packet.header.stream_key) {
+        if (m_stream_key != packet.header.stream_key) {
             ++m_discarded_packets;
             std::cerr << "Packet " << packet.header.seq_num
                       << " discarded. Unexpected stream_key "
                       << packet.header.stream_key
-                      << ", expected " << stream_key << std::endl;
+                      << ", expected " << m_stream_key << std::endl;
             continue;
         }
 
@@ -68,7 +69,7 @@ void StreamServer::WriteReceivedPacketsTo(std::ostream& stream, StreamKeyType st
         Log(packet.header.stream_key);
     }
 
-    Log(packet.header.stream_key, true);
+    Log(true);
 }
 
 size_t StreamServer::ReceivePacket(Packet& result)
@@ -98,7 +99,7 @@ size_t StreamServer::ReceivePacket(Packet& result)
     return payload_size;
 }
 
-void StreamServer::Log(StreamKeyType stream_key, bool force /*= false*/) noexcept
+void StreamServer::Log(bool force /*= false*/) noexcept
 {
     if (m_last_logged_packet_seq_num != Packet::Header::s_invalid_seq_num
         && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute
@@ -106,7 +107,7 @@ void StreamServer::Log(StreamKeyType stream_key, bool force /*= false*/) noexcep
         return;
     }
 
-    std::cout << "stream_key=" << stream_key
+    std::cout << "stream_key=" << m_stream_key
               << ", last_packet_seq_num=" << m_last_packet_seq_num
               << ", payload_sum=" << m_payload_sum
               << ", lost_packets=" << m_lost_packets
