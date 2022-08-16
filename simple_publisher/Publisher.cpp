@@ -35,7 +35,7 @@ void Publisher::SendPackets(std::istream& stream)
         SendPacket(packet, bytes_read);
         Log();
         ++m_last_packet_seq_num;
-        std::this_thread::sleep_for(g_gap_between_packets);
+        //        std::this_thread::sleep_for(g_gap_between_packets);
     }
 
     Log(true);
