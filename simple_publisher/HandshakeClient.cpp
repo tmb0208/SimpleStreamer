@@ -7,14 +7,14 @@
 
 using namespace boost::asio;
 
-HandshakeClient::HandshakeClient(std::shared_ptr<boost::asio::io_service> io_service)
+HandshakeClient::HandshakeClient(io_service& io_service)
     : m_io_service(io_service)
-    , m_socket(*m_io_service)
+    , m_socket(m_io_service)
 {
 }
 
 ip::port_type HandshakeClient::Run(
-    const char* endpoint, const char* secret_key, StreamKeyType stream_key)
+    std::string_view endpoint, std::string_view secret_key, StreamKeyType stream_key)
 {
     std::cout << "Handshake started" << std::endl;
 
@@ -29,34 +29,25 @@ ip::port_type HandshakeClient::Run(
 }
 
 void HandshakeClient::SendOffer(
-    const char* endpoint, const char* secret_key, StreamKeyType stream_key)
+    std::string_view endpoint, std::string_view secret_key, StreamKeyType stream_key)
 {
-    if (secret_key == nullptr) {
-        throw std::runtime_error("PUBLISHER_SECRET environment variable not initialized");
-    }
-
-    const size_t secret_key_size = strlen(secret_key);
-    if (secret_key_size > sizeof(Offer::secret_key)) {
+    if (secret_key.size() > Offer::s_secret_key_size) {
         std::stringstream err;
         err << "Secret key is longer than "
-            << std::to_string(sizeof(Offer::secret_key))
+            << Offer::s_secret_key_size
             << ": " << secret_key
-            << '(' << std::to_string(secret_key_size) << ')';
+            << '(' << secret_key.size() << ')';
         throw std::runtime_error(err.str());
     }
 
-    m_socket.connect(ip::tcp::endpoint(
-        ip::address::from_string(endpoint), g_handshake_port));
+    m_socket.connect(ip::tcp::endpoint(ip::make_address(endpoint), g_handshake_port));
 
-    Offer offer { boost::endian::native_to_big(OfferType::Publisher), {}, stream_key };
-    memcpy(offer.secret_key, secret_key, secret_key_size + 1 /*\0*/);
-    const auto buf = buffer(&offer, sizeof(offer));
+    Offer offer { boost::endian::native_to_big(Offer::Type::Publisher), {}, boost::endian::native_to_big(stream_key) };
+    memcpy(offer.secret_key, secret_key.data(), secret_key.size() + 1 /*\0*/);
     boost::system::error_code error;
-    write(m_socket, buf, transfer_exactly(sizeof(offer)), error);
+    write(m_socket, buffer(&offer, sizeof(offer)), transfer_exactly(sizeof(offer)), error);
     if (error) {
-        std::stringstream err;
-        err << "Failed to send offer: " << error.message();
-        throw std::runtime_error(err.str());
+        detail::throw_error(error, "Failed to send offer");
     }
 }
 
@@ -66,9 +57,7 @@ ip::port_type HandshakeClient::WaitStreamPort()
     boost::system::error_code error;
     read(m_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
     if (error) {
-        std::stringstream err;
-        err << "Failed to read UDP port: " << error.message();
-        throw std::runtime_error(err.str());
+        detail::throw_error(error, "Failed to read UDP port");
     }
 
     return result;

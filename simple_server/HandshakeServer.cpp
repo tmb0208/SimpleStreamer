@@ -8,25 +8,25 @@
 
 using namespace boost::asio;
 
-HandshakeServer::HandshakeServer(std::shared_ptr<io_service> io_service)
+HandshakeServer::HandshakeServer(io_service& io_service)
     : m_io_service(io_service)
-    , m_acceptor(*m_io_service, ip::tcp::endpoint(ip::tcp::v4(), g_handshake_port))
-    , m_socket(*m_io_service)
+    , m_acceptor(m_io_service, ip::tcp::endpoint(ip::tcp::v4(), g_handshake_port))
+    , m_socket(m_io_service)
 {
     m_acceptor.accept(m_socket);
 }
 
-StreamKeyType HandshakeServer::Run(const ip::port_type stream_port)
+StreamKeyType HandshakeServer::Run(ip::port_type stream_port)
 {
     std::cout << "Handshake started" << std::endl;
 
-    const Offer offer = ReadOffer();
+    auto offer = ReadOffer();
     std::cout << "Offer received: "
               << (uint32_t)offer.offer_type << ", "
               << offer.secret_key << ", "
               << offer.stream_key << std::endl;
 
-    if (!ValidateSecretKey(offer.secret_key)) {
+    if (!ValidateSecretKey(offer)) {
         std::stringstream err;
         err << "Invalid secret key: " << offer.secret_key;
         throw std::runtime_error(err.str());
@@ -46,28 +46,24 @@ Offer HandshakeServer::ReadOffer()
     boost::system::error_code error;
     read(m_socket, buffer(&result, sizeof(result)), transfer_exactly(sizeof(result)), error);
     if (error) {
-        std::stringstream err;
-        err << "Failed to read offer: " << error.message();
-        throw std::runtime_error(err.str());
+        detail::throw_error(error, "Failed to read offer");
     }
 
     result.offer_type = boost::endian::big_to_native(result.offer_type);
+    result.stream_key = boost::endian::big_to_native(result.stream_key);
     return result;
 }
 
-bool HandshakeServer::ValidateSecretKey(const char* secret_key) const noexcept
+bool HandshakeServer::ValidateSecretKey(const Offer& offer) const noexcept // TODO: Move to Offer class
 {
-    return std::strcmp(s_expected_secret_key, secret_key) == 0;
+    return s_expected_secret_key == offer.secret_key && offer.offer_type == Offer::Type::Publisher;
 }
 
-void HandshakeServer::SendStreamPort(const ip::port_type port)
+void HandshakeServer::SendStreamPort(ip::port_type port)
 {
-    const auto buf = buffer(&port, sizeof(port));
     boost::system::error_code error;
-    write(m_socket, buf, transfer_exactly(sizeof(port)), error);
+    write(m_socket, buffer(&port, sizeof(port)), transfer_exactly(sizeof(port)), error);
     if (error) {
-        std::stringstream err;
-        err << "Failed to send udp port: " << error.message();
-        throw std::runtime_error(err.str());
+        detail::throw_error(error, "Failed to send udp port");
     }
 }

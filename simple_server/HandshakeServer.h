@@ -1,25 +1,25 @@
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "Helpers.h"
+
+#include <boost/asio.hpp>
 
 class HandshakeServer {
 
 public:
-    HandshakeServer(std::shared_ptr<boost::asio::io_service> io_service);
+    explicit HandshakeServer(boost::asio::io_service& io_service);
 
-    StreamKeyType Run(const boost::asio::ip::port_type stream_port);
+    StreamKeyType Run(boost::asio::ip::port_type stream_port);
 
 private:
     Offer ReadOffer();
-    bool ValidateSecretKey(const char* secret_key) const noexcept;
-    void SendStreamPort(const boost::asio::ip::port_type port);
+    bool ValidateSecretKey(const Offer &offer) const noexcept;
+    void SendStreamPort(boost::asio::ip::port_type port);
 
 private:
-    static constexpr char s_expected_secret_key[] = "secret_key";
+    static constexpr std::string_view s_expected_secret_key = "secret_key";
 
-    std::shared_ptr<boost::asio::io_service> m_io_service;
+    boost::asio::io_service& m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
     boost::asio::ip::tcp::socket m_socket;
 };

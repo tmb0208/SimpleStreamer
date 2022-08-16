@@ -1,24 +1,24 @@
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "Helpers.h"
+
+#include <boost/asio.hpp>
 
 class Publisher {
 public:
-    Publisher(std::shared_ptr<boost::asio::io_service> io_service);
+    explicit Publisher(boost::asio::io_service& io_service);
 
-    void Stream(const char* endpoint, boost::asio::ip::port_type port, const std::string& file_path);
+    void Stream(std::string_view endpoint, boost::asio::ip::port_type port, std::istream& stream);
 
-    StreamKeyType StreamKey() const;
+    StreamKeyType StreamKey() const noexcept;
 
 private:
-    void SendPackets(const std::string& file_path);
+    void SendPackets(std::istream& stream);
     void SendPacket(const Packet& packet, size_t payload_size);
     void Log(bool force = false) const noexcept;
 
 private:
-    std::shared_ptr<boost::asio::io_service> m_io_service;
+    boost::asio::io_service& m_io_service;
     boost::asio::ip::udp::socket m_socket;
 
     StreamKeyType m_stream_key;

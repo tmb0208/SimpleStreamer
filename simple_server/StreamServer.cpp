@@ -6,20 +6,18 @@
 
 #include <boost/endian/conversion.hpp>
 
-#include "Helpers.h"
-
 using namespace boost::asio;
 
-StreamServer::StreamServer(std::shared_ptr<boost::asio::io_service> io_service)
+StreamServer::StreamServer(io_service& io_service)
     : m_io_service(io_service)
-    , m_socket(*m_io_service, ip::udp::endpoint(ip::udp::v4(), 0))
+    , m_socket(m_io_service, ip::udp::endpoint(ip::udp::v4(), 0))
 {
 }
 
-void StreamServer::Run(const std::string& file_path, StreamKeyType stream_key)
+void StreamServer::Run(std::ostream& stream, StreamKeyType stream_key)
 {
     std::cout << "Stream started" << std::endl;
-    WriteReceivedPacketsTo(file_path, stream_key);
+    WriteReceivedPacketsTo(stream, stream_key);
     std::cout << "Stream completed" << std::endl;
 }
 
@@ -28,28 +26,28 @@ ip::port_type StreamServer::Port() const noexcept
     return m_socket.local_endpoint().port();
 }
 
-void StreamServer::WriteReceivedPacketsTo(
-    const std::string& file_path, StreamKeyType stream_key)
+void StreamServer::WriteReceivedPacketsTo(std::ostream& stream, StreamKeyType stream_key)
 {
-    std::ofstream file(file_path, std::ios::binary);
     Packet packet;
-    while (m_socket.is_open()) {
-        const auto payload_size = ReceivePacket(packet);
-        if (payload_size <= 0) {
-            continue;
+    while (true) {
+        const size_t payload_size = ReceivePacket(packet);
+        if (payload_size == 0) {
+            break;
         }
 
         if (stream_key != packet.header.stream_key) {
             ++m_discarded_packets;
             std::cerr << "Packet " << packet.header.seq_num
-                      << " discarded. Unexpected stream_key" << packet.header.stream_key << std::endl;
+                      << " discarded. Unexpected stream_key "
+                      << packet.header.stream_key
+                      << ", expected " << stream_key << std::endl;
             continue;
         }
 
         if (Packet::Header::s_invalid_seq_num == packet.header.seq_num) {
-            std::stringstream err;
-            err << "Invalid sequence number: " << packet.header.seq_num;
-            throw std::runtime_error(err.str());
+            ++m_discarded_packets;
+            std::cerr << "Invalid sequence number. Packet discarded." << std::endl;
+            continue;
         }
 
         if (m_last_packet_seq_num != Packet::Header::s_invalid_seq_num) {
@@ -65,7 +63,7 @@ void StreamServer::WriteReceivedPacketsTo(
 
         m_last_packet_seq_num = packet.header.seq_num;
 
-        file.write(packet.payload, payload_size);
+        stream.write(packet.payload, payload_size);
         m_payload_sum += payload_size;
         Log(packet.header.stream_key);
     }
@@ -79,8 +77,6 @@ size_t StreamServer::ReceivePacket(Packet& result)
         buffer(&result, sizeof(result)), boost::asio::use_future);
     constexpr auto timeout = g_gap_between_packets + std::chrono::seconds(3);
     if (read_result.wait_for(timeout) == std::future_status::timeout) {
-        m_socket.close();
-        std::cout << "Socket closed" << std::endl;
         return 0;
     }
 
@@ -102,7 +98,7 @@ size_t StreamServer::ReceivePacket(Packet& result)
     return payload_size;
 }
 
-void StreamServer::Log(StreamKeyType stream_key, bool force /*= false*/) const noexcept
+void StreamServer::Log(StreamKeyType stream_key, bool force /*= false*/) noexcept
 {
     if (m_last_logged_packet_seq_num != Packet::Header::s_invalid_seq_num
         && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute

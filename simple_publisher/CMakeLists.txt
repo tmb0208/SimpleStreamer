@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
-
-project(simple_publisher LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.2)
 
 add_executable(simple_publisher
     main.cpp
