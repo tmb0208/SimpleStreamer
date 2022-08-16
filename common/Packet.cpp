@@ -1,5 +1,5 @@
 #include "Packet.h"
-#include "Helpers.hpp"
+#include "Helpers.h"
 
 #include <boost/endian/conversion.hpp>
 
@@ -29,21 +29,21 @@ std::vector<std::byte> Packet::Serialize() const noexcept
     const Header header { boost::endian::native_to_big(m_header.seq_num),
         boost::endian::native_to_big(m_header.stream_key), boost::endian::native_to_big(m_payload.size()) };
 
-    return SerializeHelper(&header, sizeof(header),
+    return ::SerializeHelper(&header, sizeof(header),
         m_payload.data(), m_payload.size());
 }
 
 Packet Packet::Deserialize(const std::vector<std::byte>& data)
 {
     Packet::Header header;
-    const size_t deserialized = DerializeHelper(data,
+    const size_t deserialized = DeserializeHelper(data,
         &header, sizeof(header));
 
     std::vector<PayloadItem> payload;
 
     header.payload_size = boost::endian::big_to_native(header.payload_size);
     payload.resize(header.payload_size);
-    DerializeHelper(data.data() + deserialized, data.size(),
+    ::DeserializeHelper(data.data() + deserialized, data.size(),
         payload.data(), payload.size());
     return Packet(boost::endian::big_to_native(header.seq_num),
         boost::endian::big_to_native(header.stream_key),

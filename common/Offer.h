@@ -13,18 +13,7 @@ public:
         Publisher
     };
 
-private:
-    struct SerializableOffer {
-        Offer::EType type;
-        char secret_key[Offer::s_secret_key_size];
-        StreamKeyType stream_key;
-
-        SerializableOffer() = default;
-        SerializableOffer(Offer::EType type, std::string_view secret_key, StreamKeyType stream_key);
-    };
-
-public:
-    static constexpr size_t s_serialized_size = sizeof(SerializableOffer);
+    static constexpr size_t s_serialized_size = sizeof(EType) + s_secret_key_size + sizeof(StreamKeyType);
 
     Offer(EType type, std::string_view secret_key);
 
@@ -39,10 +28,12 @@ public:
     static Offer Deserialize(const std::vector<std::byte>& data);
 
 private:
-    Offer(SerializableOffer data);
+    Offer(EType type, std::string_view secret_key, StreamKeyType stream_key);
 
     static StreamKeyType GenerateStreamKey();
 
 private:
-    const SerializableOffer m_data;
+    Offer::EType m_type;
+    std::string m_secret_key;
+    StreamKeyType m_stream_key;
 };

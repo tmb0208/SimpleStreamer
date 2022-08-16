@@ -37,7 +37,9 @@ void HandshakeClient::Run(
 void HandshakeClient::SendOffer(const Offer& offer)
 {
     boost::system::error_code error;
-    write(m_socket, buffer(offer.Serialize()), transfer_exactly(sizeof(offer)), error);
+    auto serialized_offer = offer.Serialize();
+    const auto serialized_size = serialized_offer.size();
+    write(m_socket, buffer(std::move(serialized_offer)), transfer_exactly(serialized_size), error);
     if (error) {
         detail::throw_error(error, "Failed to send offer");
     }

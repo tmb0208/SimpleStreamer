@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
+namespace {
 size_t SerializeSizeHelperInternal()
 {
     return 0;
@@ -40,24 +41,25 @@ std::vector<std::byte> SerializeHelper(Args... args)
     return result;
 }
 
-size_t DerializeHelper(const std::byte* /*in*/, size_t /*size*/)
+size_t DeserializeHelper(const std::byte* /*in*/, size_t /*size*/)
 {
     return 0;
 }
 
 template <typename... Args>
-size_t DerializeHelper(const std::byte* in, size_t in_size, void* out, size_t out_size, Args... args)
+size_t DeserializeHelper(const std::byte* in, size_t in_size, void* out, size_t out_size, Args... args)
 {
     if (out_size > in_size) {
         throw std::runtime_error("Not enough space to deserialize");
     }
 
     memcpy(out, in, out_size);
-    return out_size + DerializeHelper(in + in_size, in_size - out_size, std::forward<Args>(args)...);
+    return out_size + DeserializeHelper(in + out_size, in_size - out_size, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-size_t DerializeHelper(const std::vector<std::byte>& in, Args... args)
+size_t DeserializeHelper(const std::vector<std::byte>& in, Args... args)
 {
-    return DerializeHelper(in.data(), in.size(), std::forward<Args>(args)...);
+    return DeserializeHelper(in.data(), in.size(), std::forward<Args>(args)...);
+}
 }

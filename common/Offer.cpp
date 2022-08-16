@@ -1,79 +1,80 @@
 #include "Offer.h"
+#include "Helpers.h"
 
 #include <sstream>
 #include <vector>
 
 #include <boost/endian/conversion.hpp>
 
-Offer::SerializableOffer::SerializableOffer(EType type, std::string_view secret_key, StreamKeyType stream_key)
-    : type(type)
-    , stream_key(stream_key)
+Offer::Offer(EType type, std::string_view secret_key)
+    : Offer(type, secret_key, GenerateStreamKey())
 {
-    memcpy(this->secret_key, secret_key.data(), secret_key.size());
 }
 
-Offer::Offer(EType type, std::string_view secret_key)
-    : m_data(type, secret_key, GenerateStreamKey())
+Offer::Offer(EType type, std::string_view secret_key, StreamKeyType stream_key)
+    : m_type(type)
+    , m_secret_key(secret_key)
+    , m_stream_key(stream_key)
 {
-    if (secret_key.size() > s_secret_key_size) {
+    if (m_secret_key.size() > s_secret_key_size) {
         std::stringstream err;
         err << "Secret key is longer than "
             << Offer::s_secret_key_size
-            << ": " << secret_key
-            << '(' << secret_key.size() << ')';
+            << ": " << m_secret_key
+            << '(' << m_secret_key.size() << ')';
         throw std::runtime_error(err.str());
     }
-}
-
-Offer::Offer(SerializableOffer data)
-    : m_data(std::move(data))
-{
 }
 
 bool Offer::Validate(std::string_view expected_secret_key, EType expected_type) const noexcept // TODO: Move to Offer class
 {
-    return expected_secret_key == m_data.secret_key && expected_type == m_data.type;
+    return expected_secret_key == m_secret_key && expected_type == m_type;
 }
 
 Offer::EType Offer::Type() const noexcept
 {
-    return m_data.type;
+    return m_type;
 }
 
 std::string_view Offer::SecretKey() const noexcept
 {
-    return m_data.secret_key;
+    return m_secret_key;
 }
 
 StreamKeyType Offer::StreamKey() const noexcept
 {
-    return m_data.stream_key;
+    return m_stream_key;
 }
 
 std::vector<std::byte> Offer::Serialize() const noexcept
 {
-    SerializableOffer s(boost::endian::native_to_big(m_data.type),
-        m_data.secret_key,
-        boost::endian::native_to_big(m_data.stream_key));
-    std::vector<std::byte> result(sizeof(s));
-    memcpy(result.data(), &s, sizeof(s));
-    return result;
+    const auto type = boost::endian::native_to_big(m_type);
+    std::string secret_key = m_secret_key;
+    secret_key.resize(s_secret_key_size, '\0');
+    const auto stream_key = boost::endian::native_to_big(m_stream_key);
+    return ::SerializeHelper(&type, sizeof(type),
+        secret_key.data(), secret_key.size(),
+        &stream_key, sizeof(stream_key));
 }
 
 Offer Offer::Deserialize(const std::vector<std::byte>& data)
 {
-    Offer::SerializableOffer res;
-    if (data.size() != sizeof(res)) {
-        std::stringstream err;
-        err << "Cannot deserialize: data size=" << data.size()
-            << ", expected: " << sizeof(res);
-        throw std::runtime_error(err.str());
-    }
+    EType type = EType::Undefined;
+    std::string secret_key;
+    secret_key.resize(s_secret_key_size);
+    StreamKeyType stream_key = 0;
 
-    memcpy(&res, data.data(), data.size());
-    res.type = boost::endian::big_to_native(res.type);
-    res.stream_key = boost::endian::big_to_native(res.stream_key);
-    return Offer(std::move(res));
+    ::DeserializeHelper(data,
+        &type, sizeof(type),
+        secret_key.data(), secret_key.size(),
+        &stream_key, sizeof(stream_key));
+
+    const auto last_redundunt_zero_index = secret_key.find_first_of('\0');
+    secret_key.resize(last_redundunt_zero_index);
+
+    return Offer(boost::endian::big_to_native(type),
+        secret_key,
+        boost::endian::big_to_native(stream_key));
 }
 
 StreamKeyType Offer::GenerateStreamKey()
