@@ -5,4 +5,4 @@ add_executable(simple_server
     HandshakeServer.h HandshakeServer.cpp
     StreamServer.h StreamServer.cpp)
 
-target_link_libraries(simple_server ${Boost_LIBRARIES} common)
+target_link_libraries(simple_server ${Boost_LIBRARIES} protocol)

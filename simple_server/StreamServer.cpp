@@ -66,7 +66,7 @@ void StreamServer::WriteReceivedPacketsTo(std::ostream& stream)
             const auto& payload = packet.Payload();
             stream.write(payload.data(), payload.size());
             m_payload_sum += payload.size();
-            Log(packet.StreamKey());
+            Log();
         } catch (TimeoutException) {
             break;
         }
@@ -93,11 +93,10 @@ Packet StreamServer::ReceivePacket()
 void StreamServer::Log(bool force /*= false*/) noexcept
 {
     if (m_last_logged_packet_seq_num != Packet::s_invalid_seq_num
-        && m_last_packet_seq_num - m_last_logged_packet_seq_num < g_packets_per_minute
+        && (m_last_packet_seq_num - m_last_logged_packet_seq_num) % g_packets_per_minute != 0
         && !force) {
         return;
     }
-
     std::cout << "stream_key=" << m_stream_key
               << ", last_packet_seq_num=" << m_last_packet_seq_num
               << ", payload_sum=" << m_payload_sum

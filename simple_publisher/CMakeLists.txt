@@ -5,4 +5,4 @@ add_executable(simple_publisher
     HandshakeClient.h HandshakeClient.cpp
     Publisher.h Publisher.cpp)
 
-target_link_libraries(simple_publisher ${Boost_LIBRARIES} common)
+target_link_libraries(simple_publisher ${Boost_LIBRARIES} protocol)

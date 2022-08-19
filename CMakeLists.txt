@@ -9,4 +9,4 @@ find_package(Boost 1.76.0 REQUIRED system)
 
 add_subdirectory(simple_server)
 add_subdirectory(simple_publisher)
-add_subdirectory(common)
+add_subdirectory(protocol)
