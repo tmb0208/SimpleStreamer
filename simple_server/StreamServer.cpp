@@ -77,8 +77,7 @@ void StreamServer::WriteReceivedPacketsTo(std::ostream& stream)
 
 Packet StreamServer::ReceivePacket()
 {
-    std::vector<std::byte> buf;
-    buf.resize(Packet::s_max_packet_size); // TODO: resize?
+    std::vector<Byte> buf(Packet::s_max_packet_size);
     std::future<std::size_t> read_result = m_socket.async_receive(
         buffer(buf), boost::asio::use_future);
     constexpr auto timeout = g_gap_between_packets + std::chrono::seconds(3);

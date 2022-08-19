@@ -1,65 +1,77 @@
 #pragma once
 
-#include <cstring>
-#include <stdexcept>
-#include <vector>
+#include "Helpers.h"
 
-namespace {
-size_t SerializeSizeHelperInternal()
+namespace helpers {
+template <typename T>
+size_t SizeOf(const T& v)
 {
-    return 0;
+    if constexpr (std::is_trivially_copyable_v<T>)
+        return sizeof(T);
+    else
+        return std::size(v);
 }
 
-template <typename... Args>
-size_t SerializeSizeHelperInternal(const void* /*in*/, size_t in_size, Args... args)
+template <typename T, typename... Args>
+size_t SizeOf(const T& v, const Args&... args)
 {
-    return in_size + SerializeSizeHelperInternal(std::forward<Args>(args)...);
+    return SizeOf(v) + SizeOf(args...);
 }
 
-void SerializeHelperInternal(std::byte* /*out*/, size_t /*max_size*/)
+template <typename T>
+boost::span<Byte> SerializeInternal(boost::span<Byte> out, const T& v)
 {
-}
-
-template <typename... Args>
-void SerializeHelperInternal(std::byte* out, size_t max_size, const void* in, size_t in_size, Args... args)
-{
-    if (in_size > max_size) {
+    auto size = SizeOf(v);
+    if (out.size() < size) {
         throw std::runtime_error("Not enough space to serialize");
     }
 
-    memcpy(out, in, in_size);
-    SerializeHelperInternal(out + in_size, max_size - in_size, std::forward<Args>(args)...);
+    if constexpr (std::is_trivially_copyable_v<T>) {
+        memcpy(out.data(), &v, size);
+    } else {
+        std::copy(std::begin(v), std::end(v), out.begin());
+    }
+
+    return out.subspan(size);
+}
+
+template <typename T, typename... Args>
+boost::span<Byte> SerializeInternal(boost::span<Byte> out, const T& v, const Args&... args)
+{
+    out = SerializeInternal(out, v);
+    return SerializeInternal(out, args...);
 }
 
 template <typename... Args>
-std::vector<std::byte> SerializeHelper(Args... args)
+std::vector<Byte> Serialize(const Args&... args)
 {
-    std::vector<std::byte> result;
-    const size_t result_size = SerializeSizeHelperInternal(args...);
-    result.resize(result_size);
-    SerializeHelperInternal(result.data(), result.size(), args...);
+    size_t result_size = SizeOf(args...);
+    std::vector<Byte> result(result_size);
+    auto span = SerializeInternal(result, args...);
     return result;
 }
 
-size_t DeserializeHelper(const std::byte* /*in*/, size_t /*size*/)
+template <typename T>
+boost::span<const Byte> Deserialize(boost::span<const Byte> in, T& out)
 {
-    return 0;
-}
-
-template <typename... Args>
-size_t DeserializeHelper(const std::byte* in, size_t in_size, void* out, size_t out_size, Args... args)
-{
-    if (out_size > in_size) {
+    auto size = SizeOf(out);
+    if (in.size() < size) {
         throw std::runtime_error("Not enough space to deserialize");
     }
 
-    memcpy(out, in, out_size);
-    return out_size + DeserializeHelper(in + out_size, in_size - out_size, std::forward<Args>(args)...);
+    if constexpr (std::is_trivially_copyable_v<T>) {
+        memcpy(&out, in.data(), size);
+    } else {
+        std::copy(std::begin(in), std::begin(in) + size, out.begin());
+    }
+
+    return in.subspan(size);
 }
 
-template <typename... Args>
-size_t DeserializeHelper(const std::vector<std::byte>& in, Args... args)
+template <typename T, typename... Args>
+boost::span<const Byte> Deserialize(boost::span<const Byte> in, T& out, Args&... args)
 {
-    return DeserializeHelper(in.data(), in.size(), std::forward<Args>(args)...);
+    in = Deserialize(in, out);
+    return Deserialize(in, args...);
 }
 }

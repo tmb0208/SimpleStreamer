@@ -4,6 +4,8 @@
 
 #include <vector>
 
+#include <boost/core/span.hpp>
+
 class Packet {
     struct Header {
         SeqNumType seq_num = s_invalid_seq_num;
@@ -18,16 +20,16 @@ public:
 
 private:
 public:
-    Packet(SeqNumType seq_num, StreamKeyType stream_key, std::vector<PayloadItem> payload);
+    Packet(SeqNumType seq_num, StreamKeyType stream_key, std::vector<Byte> payload);
 
     SeqNumType SeqNum() const noexcept;
     StreamKeyType StreamKey() const noexcept;
-    std::vector<PayloadItem> Payload() const noexcept;
+    std::vector<Byte> Payload() const noexcept;
 
-    std::vector<std::byte> Serialize() const noexcept;
-    static Packet Deserialize(const std::vector<std::byte>& data);
+    std::vector<Byte> Serialize() const noexcept;
+    static Packet Deserialize(boost::span<const Byte> data);
 
 private:
     Header m_header;
-    std::vector<PayloadItem> m_payload;
+    std::vector<Byte> m_payload;
 };

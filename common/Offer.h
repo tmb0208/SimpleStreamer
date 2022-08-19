@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include <boost/core/span.hpp>
+
 class Offer {
 public:
     static constexpr size_t s_secret_key_size = 16;
@@ -23,9 +25,9 @@ public:
     std::string_view SecretKey() const noexcept;
     StreamKeyType StreamKey() const noexcept;
 
-    std::vector<std::byte> Serialize() const noexcept;
+    std::vector<Byte> Serialize() const noexcept;
 
-    static Offer Deserialize(const std::vector<std::byte>& data);
+    static Offer Deserialize(boost::span<const Byte> data);
 
 private:
     Offer(EType type, std::string_view secret_key, StreamKeyType stream_key);

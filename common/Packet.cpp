@@ -3,7 +3,7 @@
 
 #include <boost/endian/conversion.hpp>
 
-Packet::Packet(SeqNumType seq_num, StreamKeyType stream_key, std::vector<PayloadItem> payload)
+Packet::Packet(SeqNumType seq_num, StreamKeyType stream_key, std::vector<Byte> payload)
     : m_header { seq_num, stream_key }
     , m_payload(std::move(payload))
 {
@@ -19,32 +19,27 @@ StreamKeyType Packet::StreamKey() const noexcept
     return m_header.stream_key;
 }
 
-std::vector<PayloadItem> Packet::Payload() const noexcept
+std::vector<Byte> Packet::Payload() const noexcept
 {
     return m_payload;
 }
 
-std::vector<std::byte> Packet::Serialize() const noexcept
+std::vector<Byte> Packet::Serialize() const noexcept
 {
     const Header header { boost::endian::native_to_big(m_header.seq_num),
         boost::endian::native_to_big(m_header.stream_key), boost::endian::native_to_big(m_payload.size()) };
 
-    return ::SerializeHelper(&header, sizeof(header),
-        m_payload.data(), m_payload.size());
+    return helpers::Serialize(header, m_payload);
 }
 
-Packet Packet::Deserialize(const std::vector<std::byte>& data)
+Packet Packet::Deserialize(boost::span<const Byte> data)
 {
     Packet::Header header;
-    const size_t deserialized = DeserializeHelper(data,
-        &header, sizeof(header));
-
-    std::vector<PayloadItem> payload;
-
+    const auto payload_data = helpers::Deserialize(data, header);
     header.payload_size = boost::endian::big_to_native(header.payload_size);
-    payload.resize(header.payload_size);
-    ::DeserializeHelper(data.data() + deserialized, data.size(),
-        payload.data(), payload.size());
+
+    std::vector<Byte> payload(header.payload_size);
+    helpers::Deserialize(payload_data, payload);
     return Packet(boost::endian::big_to_native(header.seq_num),
         boost::endian::big_to_native(header.stream_key),
         std::move(payload));

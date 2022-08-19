@@ -28,7 +28,7 @@ void Publisher::Stream(std::istream& stream)
 void Publisher::SendPackets(std::istream& stream)
 {
     while (stream.good()) {
-        std::vector<PayloadItem> payload(Packet::s_max_payload_size);
+        std::vector<Byte> payload(Packet::s_max_payload_size);
         stream.read(payload.data(), Packet::s_max_payload_size);
         const auto bytes_read = stream.gcount();
         payload.resize(bytes_read);
@@ -37,7 +37,7 @@ void Publisher::SendPackets(std::istream& stream)
         SendPacket(packet);
         Log();
         ++m_last_packet_seq_num;
-        //        std::this_thread::sleep_for(g_gap_between_packets);
+        std::this_thread::sleep_for(g_gap_between_packets);
     }
 
     Log(true);

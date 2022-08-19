@@ -46,28 +46,22 @@ StreamKeyType Offer::StreamKey() const noexcept
     return m_stream_key;
 }
 
-std::vector<std::byte> Offer::Serialize() const noexcept
+std::vector<Byte> Offer::Serialize() const noexcept
 {
     const auto type = boost::endian::native_to_big(m_type);
     std::string secret_key = m_secret_key;
     secret_key.resize(s_secret_key_size, '\0');
     const auto stream_key = boost::endian::native_to_big(m_stream_key);
-    return ::SerializeHelper(&type, sizeof(type),
-        secret_key.data(), secret_key.size(),
-        &stream_key, sizeof(stream_key));
+    return helpers::Serialize(type, secret_key, stream_key);
 }
 
-Offer Offer::Deserialize(const std::vector<std::byte>& data)
+Offer Offer::Deserialize(boost::span<const Byte> data)
 {
     EType type = EType::Undefined;
-    std::string secret_key;
-    secret_key.resize(s_secret_key_size);
+    std::string secret_key(s_secret_key_size, '\0');
     StreamKeyType stream_key = 0;
 
-    ::DeserializeHelper(data,
-        &type, sizeof(type),
-        secret_key.data(), secret_key.size(),
-        &stream_key, sizeof(stream_key));
+    helpers::Deserialize(data, type, secret_key, stream_key);
 
     const auto last_redundunt_zero_index = secret_key.find_first_of('\0');
     secret_key.resize(last_redundunt_zero_index);

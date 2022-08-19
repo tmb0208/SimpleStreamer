@@ -41,7 +41,7 @@ StreamKeyType HandshakeServer::Run(ip::port_type stream_port)
 
 Offer HandshakeServer::ReadOffer()
 {
-    std::vector<std::byte> data(Offer::s_serialized_size);
+    std::vector<Byte> data(Offer::s_serialized_size);
     boost::system::error_code error;
     read(m_socket, buffer(data), transfer_exactly(Offer::s_serialized_size), error);
     if (error) {

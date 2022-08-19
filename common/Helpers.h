@@ -1,28 +1,33 @@
 #pragma once
 
+#include "Defs.h"
+
+#include <boost/core/span.hpp>
+
+#include <type_traits>
 #include <vector>
 
-namespace {
-size_t SerializeSizeHelperInternal();
+namespace helpers {
+template <typename T>
+size_t SizeOf(const T& v);
+
+template <typename T, typename... Args>
+size_t SizeOf(const T& v, const Args&... args);
+
+template <typename T>
+boost::span<Byte> SerializeInternal(boost::span<Byte> out, const T& v);
+
+template <typename T, typename... Args>
+boost::span<Byte> SerializeInternal(boost::span<Byte> out, const T& v, const Args&... args);
 
 template <typename... Args>
-size_t SerializeSizeHelperInternal(const void* /*in*/, size_t in_size, Args... args);
+std::vector<Byte> Serialize(const Args&... args);
 
-void SerializeHelperInternal(std::byte* /*out*/, size_t /*max_size*/);
+template <typename T>
+boost::span<const Byte> Deserialize(boost::span<const Byte> in, T& out);
 
-template <typename... Args>
-void SerializeHelperInternal(std::byte* out, size_t max_size, const void* in, size_t in_size, Args... args);
-
-template <typename... Args>
-std::vector<std::byte> SerializeHelper(Args... args);
-
-size_t DeserializeHelper(const std::byte* /*in*/, size_t /*size*/);
-
-template <typename... Args>
-size_t DeserializeHelper(const std::byte* in, size_t in_size, void* out, size_t out_size, Args... args);
-
-template <typename... Args>
-size_t DeserializeHelper(const std::vector<std::byte>& in, Args... args);
+template <typename T, typename... Args>
+boost::span<const Byte> Deserialize(boost::span<const Byte> in, T& out, Args&... args);
 }
 
 #include "Helpers.hpp"
